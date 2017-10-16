@@ -64,6 +64,13 @@ def makeFunc():
 
 def newtonRaphson(f, df, init, iterN):
 
+
+
+
+
+	# lambda 로 바꿔서 numpy 적용 하면 빠르게 될듯
+
+
 	x = Symbol('x')
 
 	#print(f)

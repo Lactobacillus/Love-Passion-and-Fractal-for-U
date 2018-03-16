@@ -1,8 +1,16 @@
 import cmath
 import sympy
+import timeit
 import itertools
 import numpy as np
+import multiprocessing
 from scipy import optimize
+import matplotlib.pyplot as plt
+from joblib import Parallel, delayed
+from sympy.parsing.sympy_parser import parse_expr
+
+np.seterr(all = 'ignore')
+np.warnings.filterwarnings('ignore')
 
 def makeFunc(order):
 	
@@ -20,19 +28,21 @@ def getSol(fList, fpList, x0):
 	sol = optimize.newton(
 		lambda x : fList.dot(np.array([x ** o for o in range(0, len(fList))])),
 		x0,
-		fprime = lambda x : fpList.dot(np.array([x ** o for o in range(0, len(fpList))])))
+		fprime = lambda x : fpList.dot(np.array([x ** o for o in range(0, len(fpList))])),
+		tol = 1.0e-5,
+		maxiter = 100)
 
 	return sol
 
 def symbolicSol(fList):
 
-	xSym = sympy.symbos('z')
+	z = sympy.symbols('z', complex = True)
 
 	string = ''
 
 	for o in range(0, len(fList)):
 
-		if fList[o] > 0 and o != 0:
+		if fList[o] > 0:
 
 			string = string + ' + ' + str(fList[o]) + '*z**' + str(o)
 
@@ -44,24 +54,70 @@ def symbolicSol(fList):
 
 			pass
 
-	return string
+	expr = parse_expr(string)
+	sol = sympy.solve(sympy.Eq(expr, 0), domain = sympy.S.Complexes)
 
-f, fp = makeFunc(4)
-print(f)
-print(fp)
+	return [s.evalf() for s in sol]
 
-width = 10
-height = 10
-resolution = 10
-reRange = np.linspace(-width / 2, width / 2, num = resolution, endpoint = True)
-imRange = np.linspace(-height / 2, height / 2, num = resolution, endpoint = True)
+def assignIdx(trueSol, sol):
 
-print(symbolicSol(f))
+	#radius, angle = cmath.polar(sol)
+	error = [(sympy.re(t) - sol.real)**2 + (sympy.im(t) - sol.imag)**2 for t in trueSol]
 
-for (a, b) in itertools.product(reRange, imRange):
+	if min(error) < 0.001:
+
+		return error.index(min(error))
+
+	else:
+
+		return len(error)
+
+def getPixel(f, fp, trueSol, a, b):
 
 	x0 = a + 1j * b
-	#print(x0)
 	sol = getSol(f, fp, x0)
 
-	print(cmath.polar(sol))
+	return (a, b, assignIdx(trueSol, sol))
+
+def main():
+
+	width = 10
+	height = 10
+	order = 3
+	resolution = 1000
+	reRange = np.linspace(-width / 2, width / 2, num = resolution, endpoint = True)
+	imRange = np.linspace(-height / 2, height / 2, num = resolution, endpoint = True)
+	numProcess = multiprocessing.cpu_count()
+
+	X = list()
+	Y = list()
+	C = list()
+
+	f, fp = makeFunc(order)
+
+	f = np.array([-1, 0, 0, 1])
+	fp = np.array([0, 0, 3])
+
+	trueSol = symbolicSol(f)
+
+	print('Start : ', f, fp)
+	print(trueSol)
+
+	timeNow = timeit.default_timer()
+
+	result = Parallel(n_jobs = numProcess)(delayed(getPixel)(f, fp, trueSol, a, b) for (a, b) in itertools.product(reRange, imRange))
+
+	print('Time : ', timeit.default_timer() - timeNow)
+
+	for (x, y, c) in result:
+
+		X.append(x)
+		Y.append(y)
+		C.append(c)
+
+	plt.scatter(X, Y, c = C, marker = 'o', alpha = 0.4)
+	plt.show()
+
+if __name__ == '__main__':
+
+	main()

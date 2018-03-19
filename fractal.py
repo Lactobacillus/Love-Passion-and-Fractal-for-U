@@ -6,6 +6,7 @@ import numpy as np
 import multiprocessing
 from scipy import optimize
 import matplotlib.pyplot as plt
+import matplotlib.image as Image
 from joblib import Parallel, delayed
 from sympy.parsing.sympy_parser import parse_expr
 
@@ -52,7 +53,7 @@ def symbolicSol(fList):
 
 		else:
 
-			pass
+			continue
 
 	expr = parse_expr(string)
 	sol = sympy.solve(sympy.Eq(expr, 0), domain = sympy.S.Complexes)
@@ -84,14 +85,13 @@ def main():
 	width = 10
 	height = 10
 	order = 3
-	resolution = 1000
+	resolution = 10000
+	numProcess = multiprocessing.cpu_count()
+	
 	reRange = np.linspace(-width / 2, width / 2, num = resolution, endpoint = True)
 	imRange = np.linspace(-height / 2, height / 2, num = resolution, endpoint = True)
-	numProcess = multiprocessing.cpu_count()
-
-	X = list()
-	Y = list()
-	C = list()
+	color = {'R' : np.random.rand(order), 'G' : np.random.rand(order), 'B' : np.random.rand(order)}
+	image = np.zeros((resolution, resolution, 3))
 
 	f, fp = makeFunc(order)
 
@@ -104,18 +104,24 @@ def main():
 	print(trueSol)
 
 	timeNow = timeit.default_timer()
-
 	result = Parallel(n_jobs = numProcess)(delayed(getPixel)(f, fp, trueSol, a, b) for (a, b) in itertools.product(reRange, imRange))
-
 	print('Time : ', timeit.default_timer() - timeNow)
 
-	for (x, y, c) in result:
+	for (i, j) in itertools.product([t for t in range(0, resolution)], [t for t in range(0, resolution)]):
 
-		X.append(x)
-		Y.append(y)
-		C.append(c)
+		image[i, j, 0] = color['R'][result[i * resolution + j][2]]
+		image[i, j, 1] = color['G'][result[i * resolution + j][2]]
+		image[i, j, 2] = color['B'][result[i * resolution + j][2]]
 
-	plt.scatter(X, Y, c = C, marker = 'o', alpha = 0.4)
+	#for (x, y, c) in result:
+
+		#image[x, y, 0] = color['R'][c]
+		#image[x, y, 1] = color['G'][c]
+		#image[x, y, 2] = color['B'][c]
+		#print(x, y, c)
+	Image.imsave('test.png', image)
+	plt.imshow(image, interpolation = None)
+	#plt.scatter(X, Y, c = C, marker = 'o', alpha = 0.4)
 	plt.show()
 
 if __name__ == '__main__':

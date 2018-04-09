@@ -85,7 +85,7 @@ def main():
 	width = 10
 	height = 10
 	order = 3
-	resolution = 10000
+	resolution = 5000
 	numProcess = multiprocessing.cpu_count()
 	
 	reRange = np.linspace(-width / 2, width / 2, num = resolution, endpoint = True)
@@ -95,8 +95,8 @@ def main():
 
 	f, fp = makeFunc(order)
 
-	f = np.array([-1, 0, 0, 1])
-	fp = np.array([0, 0, 3])
+	#f = np.array([-1, 0, 0, 1])
+	#fp = np.array([0, 0, 3])
 
 	trueSol = symbolicSol(f)
 
@@ -119,11 +119,13 @@ def main():
 		#image[x, y, 1] = color['G'][c]
 		#image[x, y, 2] = color['B'][c]
 		#print(x, y, c)
-	Image.imsave('test.png', image)
-	plt.imshow(image, interpolation = None)
+	Image.imsave(str(f) + '.png', image)
+	#plt.imshow(image, interpolation = None)
 	#plt.scatter(X, Y, c = C, marker = 'o', alpha = 0.4)
-	plt.show()
+	#plt.show()
 
 if __name__ == '__main__':
 
-	main()
+	for i in range(50):
+
+		main()
